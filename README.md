@@ -13,7 +13,7 @@
 
 1.  **基本运行**：
     ```bash
-    python sasa_calc.py 1I4R_prepared.pdb A 89
+    python sasa_calc.py 1IAR_prepared.pdb A 89
     ```
 2.  **批量处理示例**：
     如果你想遍历一个包含多个残基的列表（例如残基 89, 90, 91），可以使用简单的 Shell 循环：
