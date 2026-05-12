@@ -67,7 +67,10 @@ def main():
     with open(in_file, "w", encoding="utf-8") as f:
         f.writelines(new_lines)
 
-    # ====================== ✅ 最终正确版本 ======================
+    # ====================== ✅ 输出执行脚本 ======================
+    # 硬编码使用32核心计算:
+    # -max_threads 32
+    # 按需要更改
     sh_content = f"${{SCHRODINGER}}/jaguar run -jobname=jag_{name}_spe_r2SCAN-3c {in_file} -HOST localhost -PARALLEL 1 -max_threads 32 -TMPLAUNCHDIR\n"
 
     with open(sh_file, "w", encoding="utf-8") as f:
