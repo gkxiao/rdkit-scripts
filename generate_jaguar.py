@@ -6,80 +6,111 @@ import subprocess
 def print_help():
     help_text = """
 ================================================================================
-===  Jaguar 输入文件自动生成脚本 (r2SCAN-3c + COSMO 水溶剂)  ===
+===  Jaguar Input Generator for r2SCAN-3c / COSMO Solvent  ===
 ================================================================================
-功能：
-  1. 从 SDF 文件生成 Jaguar 输入文件 (.in)
-  2. 自动写入计算参数：r2SCAN-3c / isolv=7(COSMO) / nogas=2(仅溶液相)
-  3. 自动生成可执行的提交脚本 (.sh)
+Function:
+  1. Generate Jaguar .in file from SDF via Schrodinger obabel
+  2. Predefined settings: r2SCAN-3c, COSMO solvent(isolv=7), nogas=2
+  3. Set molecular charge by command line; multip=1 fixed as default
+  4. Generate executable bash script for Jaguar calculation
 
-用法：
-  python generate_jaguar.py 文件名.sdf
+Usage:
+  python generate_jaguar.py molecule.sdf molecular_charge
   python generate_jaguar.py -h | --help
 
-示例：
-  python generate_jaguar.py test.sdf
+Example:
+  python generate_jaguar.py test.sdf 1     # charge +1
+  python generate_jaguar.py test.sdf 0     # neutral
+  python generate_jaguar.py test.sdf -1    # charge -1
+
+Output files:
+  1. jag_${name}_spe_r2SCAN-3c.in    Jaguar input file
+  2. jag_${name}_spe_r2SCAN-3c.sh    Job submission script
 ================================================================================
 """
     print(help_text)
     sys.exit(0)
 
 def main():
+    # Show help if -h / --help
     if len(sys.argv) < 2 or sys.argv[1] in ("-h", "--help"):
         print_help()
 
-    sdf_full = sys.argv[1]
-    name = os.path.splitext(sdf_full)[0]
-
-    in_file = f"jag_{name}_spe_r2SCAN-3c.in"
-    sh_file = f"jag_{name}_spe_r2SCAN-3c.sh"
-
-    SCHRODINGER = os.getenv("SCHRODINGER")
-    if not SCHRODINGER:
-        print("错误：未找到环境变量 $SCHRODINGER！")
+    # Check command line arguments
+    if len(sys.argv) != 3:
+        print("Error: Invalid arguments!")
+        print("Usage: python generate_jaguar.py molecule.sdf molecular_charge")
+        print("Example: python generate_jaguar.py test.sdf 1")
         sys.exit(1)
 
-    obabel = os.path.join(SCHRODINGER, "utilities", "obabel")
+    # Parse input arguments
+    sdf_filename = sys.argv[1]
+    mol_charge = sys.argv[2]
+    multip_value = 1      # fixed spin multiplicity: multip=1
 
-    print(f"==> 生成输入文件: {in_file}")
-    subprocess.run([obabel, "-isdf", sdf_full, "-ojin", "-O", in_file], check=True)
+    # Get base name without .sdf suffix
+    base_name = os.path.splitext(sdf_filename)[0]
+    in_file = f"jag_{base_name}_spe_r2SCAN-3c.in"
+    sh_file = f"jag_{base_name}_spe_r2SCAN-3c.sh"
 
+    # Get SCHRODINGER environment variable
+    schrodinger_env = os.getenv("SCHRODINGER")
+    if not schrodinger_env:
+        print("Error: Environment variable $SCHRODINGER not found!")
+        sys.exit(1)
+
+    # Path to Schrodinger obabel
+    obabel_path = os.path.join(schrodinger_env, "utilities", "obabel")
+
+    # Convert SDF to Jaguar .in file using obabel
+    print(f"Generating Jaguar input file: {in_file}")
+    subprocess.run(
+        [obabel_path, "-isdf", sdf_filename, "-ojin", "-O", in_file],
+        check=True
+    )
+
+    # Modify Jaguar input file header & gen block
     with open(in_file, "r", encoding="utf-8") as f:
         lines = f.readlines()
 
-    new_lines = []
-    skip_mode = True
+    new_content = []
+    skip_old_header = True
+
     for line in lines:
-        if skip_mode:
-            if "&zmat" in line:
-                new_lines.append("&gen\n")
-                new_lines.append("isolv=7\n")
-                new_lines.append("pcm_model=cosmo\n")
-                new_lines.append("dftname=r2SCAN-3c\n")
-                new_lines.append("nogas=2\n")
-                new_lines.append("&\n")
-                new_lines.append(f"entry_name: {name}\n")
-                new_lines.append("&zmat\n")
-                skip_mode = False
+        # Skip original header until &zmat appears
+        if skip_old_header:
+            if "&zmat" in line.strip():
+                # Write customized &gen block
+                new_content.append("&gen\n")
+                new_content.append("isolv=7\n")
+                new_content.append("pcm_model=cosmo\n")
+                new_content.append("dftname=r2SCAN-3c\n")
+                new_content.append("nogas=2\n")
+                new_content.append(f"molchg={mol_charge}\n")
+                new_content.append(f"multip={multip_value}\n")
+                new_content.append("&\n")
+                new_content.append(f"entry_name: {base_name}\n")
+                new_content.append("&zmat\n")
+                skip_old_header = False
             continue
-        new_lines.append(line)
+        # Keep all coordinates and remaining lines
+        new_content.append(line)
 
+    # Write modified content back to .in file
     with open(in_file, "w", encoding="utf-8") as f:
-        f.writelines(new_lines)
+        f.writelines(new_content)
 
-    # ====================== ✅ 输出执行脚本 ======================
-    # 硬编码使用32核心计算:
-    # -max_threads 32
-    # 按需要更改
-    sh_content = f"${{SCHRODINGER}}/jaguar run -jobname=jag_{name}_spe_r2SCAN-3c {in_file} -HOST localhost -PARALLEL 1 -max_threads 32 -TMPLAUNCHDIR\n"
-
+    # Generate submission script, keep ${SCHRODINGER} raw without escape backslash
+    sh_content = f"${{SCHRODINGER}}/jaguar run -jobname=jag_{base_name}_spe_r2SCAN-3c {in_file} -HOST localhost -PARALLEL 1 -max_threads 32 -TMPLAUNCHDIR\n"
     with open(sh_file, "w", encoding="utf-8") as f:
         f.write(sh_content)
 
+    # Add execute permission to shell script
     os.chmod(sh_file, 0o755)
 
-    print("==> 完成！")
-    print(f"==> 运行：bash {sh_file}")
+    print("Task completed successfully!")
+    print(f"Settings applied: molchg={mol_charge}, multip={multip_value}")
+    print(f"Run calculation with: bash {sh_file}")
 
 if __name__ == "__main__":
     main()
