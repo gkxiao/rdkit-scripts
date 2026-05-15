@@ -27,7 +27,7 @@
 ## 用mayachemtools计算单点能
 
 命令行：
-```ssh
+```shell
 Psi4CalculateEnergy.py -i test.sdf --ov -o test_energy.sdf \
   --methodName r2scan-3c \
   --basisSet DEF2-mTZVPP \
@@ -39,8 +39,13 @@ Psi4CalculateEnergy.py -i test.sdf --ov -o test_energy.sdf \
 如果对多个分子进行并行计算，则使用`--mp YES`
 
 检查计算结果是否收敛，了解关键信息：
-`psi4_analysis.py test_Psi4.out`
+```shell
+psi4_analysis.py test_Psi4.out
+```
 
+结果如下：
+
+```
 ======================================================================
 Psi4 计算结果分析: test_Psi4.txt
 ======================================================================
@@ -73,3 +78,4 @@ Psi4 计算结果分析: test_Psi4.txt
    系统时间 (system): 19.8 秒
 
 ======================================================================
+```
