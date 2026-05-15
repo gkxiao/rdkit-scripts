@@ -53,7 +53,7 @@ xtb test.sdf \
 ├── CONF_1.xtbrestart           # 重启文件
 ├── CONF_1.xtbtopo.sdf          # 拓扑文件
 └── CONF_1_energy.sdf           # Psi4单点能结果
-···
+```
 
 其中，`CONF_1.xtbopt.sdf`是优化过的结果文件。该文件不适合直接使用, 需要转化为合理的SDF格式：
 
