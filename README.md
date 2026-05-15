@@ -24,6 +24,25 @@
 ### 提示：
 如果你需要处理大规模的虚筛结果或长程 MD 轨迹的每一帧，可以将 `Chem.MolFromPDBFile` 移到循环外，仅在内存中操作 `EditableMol`，这样可以极大减少磁盘 I/O 开销。
 
+## 用xTB进行几何优化
+
+命令行：
+
+```
+# 使用 -o 参数直接指定输出文件（如果 xtb 支持）
+# 或者直接使用 namespace 生成的文件名
+
+# XTB 优化（使用 namespace）
+/public/gkxiao/software/xtb-bleed/bin/xtb test.sdf --namespace CONF_1 --opt tight --alpb water --gfn 2 --parallel 8
+
+# 优化后的文件是 CONF_1.xtbopt.sdf
+```
+
+结果文件格式不适合直接使用, 需要转化为合理的SDF格式：
+```
+python fix_xtb_sdf.py CONF_1.xtbopt.sdf -t "CONF_1" -o CONF_1_opt_fixed.sdf
+```
+
 ## 用mayachemtools计算单点能
 
 命令行：
