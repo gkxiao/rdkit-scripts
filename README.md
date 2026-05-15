@@ -61,9 +61,9 @@ xtb test.sdf \
 python fix_xtb_sdf.py CONF_1.xtbopt.sdf -t "CONF_1" -o CONF_1_opt_fixed.sdf
 ```
 
-## 用mayachemtools计算单点能
+## 计算单点能
 
-命令行：
+用`MayaChemTools`的Psi4工具进行单点能计算，命令行如下：
 ```shell
 Psi4CalculateEnergy.py -i CONF_1_opt_fixed.sdf --ov -o test_spe.sdf \
   --methodName r2scan-3c \
