@@ -41,11 +41,22 @@ xtb test.sdf \
   -c 0 \
   -u 0 \
   --parallel 8
-
-# 优化后的文件是 CONF_1.xtbopt.sdf
 ```
+优化后新的文件目录如下
+```
+.
+├── test.sdf                    # 原始输入
+├── CONF_1.xtbopt.sdf           # 优化后的几何（用于后续计算）
+├── CONF_1.xtbopt.log           # 优化日志
+├── CONF_1.charges              # 电荷
+├── CONF_1.wbo                  # Wiberg键级
+├── CONF_1.xtbrestart           # 重启文件
+├── CONF_1.xtbtopo.sdf          # 拓扑文件
+└── CONF_1_energy.sdf           # Psi4单点能结果
+···
 
-结果文件格式不适合直接使用, 需要转化为合理的SDF格式：
+其中，`CONF_1.xtbopt.sdf`是优化过的结果文件。该文件不适合直接使用, 需要转化为合理的SDF格式：
+
 ```
 python fix_xtb_sdf.py CONF_1.xtbopt.sdf -t "CONF_1" -o CONF_1_opt_fixed.sdf
 ```
@@ -54,7 +65,7 @@ python fix_xtb_sdf.py CONF_1.xtbopt.sdf -t "CONF_1" -o CONF_1_opt_fixed.sdf
 
 命令行：
 ```shell
-Psi4CalculateEnergy.py -i test.sdf --ov -o test_energy.sdf \
+Psi4CalculateEnergy.py -i CONF_1_opt_fixed.sdf --ov -o test_spe.sdf \
   --methodName r2scan-3c \
   --basisSet DEF2-mTZVPP \
   --psi4DDXSolvation yes \
