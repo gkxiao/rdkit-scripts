@@ -27,8 +27,15 @@
 ## 用mayachemtools计算单点能
 
 命令行：
-`Psi4CalculateEnergy.py -i test.sdf --ov -o test_energy.sdf --methodName r2scan-3c --basisSet DEF2-mTZVPP --psi4DDXSolvation yes --psi4DDXSolvationParams "solvent water" --mp NO --psi4RunParams "NumThreads, 16"`
-
+```ssh
+Psi4CalculateEnergy.py -i test.sdf --ov -o test_energy.sdf \
+  --methodName r2scan-3c \
+  --basisSet DEF2-mTZVPP \
+  --psi4DDXSolvation yes \
+  --psi4DDXSolvationParams "solvent water" \
+  --mp NO \
+  --psi4RunParams "NumThreads, 16"
+```
 如果对多个分子进行并行计算，则使用`--mp YES`
 
 检查计算结果是否收敛，了解关键信息：
