@@ -33,7 +33,14 @@
 # 或者直接使用 namespace 生成的文件名
 
 # XTB 优化（使用 namespace）
-/public/gkxiao/software/xtb-bleed/bin/xtb test.sdf --namespace CONF_1 --opt tight --alpb water --gfn 2 --parallel 8
+xtb test.sdf \
+  --namespace CONF_1 \
+  --opt tight \
+  --alpb water \
+  --gfn 2 \
+  -c 0 \
+  -u 0 \
+  --parallel 8
 
 # 优化后的文件是 CONF_1.xtbopt.sdf
 ```
