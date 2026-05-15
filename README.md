@@ -64,7 +64,7 @@ python fix_xtb_sdf.py CONF_1.xtbopt.sdf -t "CONF_1" -o CONF_1_opt_fixed.sdf
 
 用`MayaChemTools`的Psi4工具进行单点能计算，命令行如下：
 ```shell
-Psi4CalculateEnergy.py -i CONF_1_opt_fixed.sdf --ov -o test_spe.sdf \
+Psi4CalculateEnergy.py -i CONF_1_opt_fixed.sdf --ov -o CONF_1_spe.sdf \
   --methodName r2scan-3c \
   --basisSet DEF2-mTZVPP \
   --psi4DDXSolvation yes \
@@ -76,14 +76,14 @@ Psi4CalculateEnergy.py -i CONF_1_opt_fixed.sdf --ov -o test_spe.sdf \
 
 检查计算结果是否收敛，了解关键信息：
 ```shell
-psi4_analysis.py test_Psi4.out
+psi4_analysis.py CONF_1_opt_fixed_Psi4.out
 ```
 
 结果如下：
 
 ```
 ======================================================================
-Psi4 计算结果分析: test_Psi4.txt
+Psi4 计算结果分析: CONF_1_opt_fixed_Psi4.out
 ======================================================================
 
 ✅ SCF 收敛成功
