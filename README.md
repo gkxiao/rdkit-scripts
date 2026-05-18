@@ -115,3 +115,14 @@ Psi4 计算结果分析: CONF_1_opt_fixed_Psi4.out
 
 ======================================================================
 ```
+
+## 从XYZ转SDF
+
+量化计算最常见的一个问题是，如何将XYZ转化为SDF，并归属正确的键类型、原子类型与Formal Charge。
+假设你的计算是从一个SDF文件（start.sdf）开始，在进行QM计算时使用了从这个SDF而转化得到的start.xyz, 计算之后得到xtbopt.xyz：
+
+```
+RDKit_xyz2sdf -i start.sdf -x xtbopt.xyz -o xtbopt.sdf
+```
+
+这个脚本剋有保留原有的拓扑，而将坐标更新为优化后的坐标来实现格式转化，这可以确保结构正确。
