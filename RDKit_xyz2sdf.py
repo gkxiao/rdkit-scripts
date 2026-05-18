@@ -33,7 +33,7 @@ def read_xyz(xyz_file):
 def main():
 
     parser = argparse.ArgumentParser(
-        description="Transfer XYZ coordinates onto topology SDF"
+        description="Transfer optimized XYZ coordinates onto topology SDF"
     )
 
     parser.add_argument(
@@ -52,6 +52,12 @@ def main():
         "-o", "--output_sdf",
         required=True,
         help="Output optimized SDF"
+    )
+
+    parser.add_argument(
+        "-title",
+        default=None,
+        help="Optional title/name written to SDF"
     )
 
     args = parser.parse_args()
@@ -110,6 +116,12 @@ def main():
             i,
             Point3D(x, y, z)
         )
+
+    # =========================
+    # Set title if provided
+    # =========================
+    if args.title is not None:
+        mol.SetProp("_Name", args.title)
 
     # =========================
     # Write output
