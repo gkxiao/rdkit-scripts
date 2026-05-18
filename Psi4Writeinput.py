@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """
 Psi4WriteInput.py - Generate Psi4 input file from XYZ or SDF file
 
