@@ -125,4 +125,4 @@ Psi4 计算结果分析: CONF_1_opt_fixed_Psi4.out
 RDKit_xyz2sdf -i start.sdf -x xtbopt.xyz -o xtbopt.sdf
 ```
 
-这个脚本剋有保留原有的拓扑，而将坐标更新为优化后的坐标来实现格式转化，这可以确保结构正确。
+这个脚本可以保留原有的拓扑，而将坐标更新为优化后的坐标（从xyz文件读入）来实现格式转化，这可以确保结构正确。
