@@ -122,7 +122,7 @@ Psi4 计算结果分析: CONF_1_opt_fixed_Psi4.out
 假设你的计算是从一个SDF文件（start.sdf）开始，在进行QM计算时使用了从这个SDF而转化得到的start.xyz, 计算之后得到xtbopt.xyz：
 
 ```
-RDKit_xyz2sdf -i start.sdf -x xtbopt.xyz -o xtbopt.sdf
+RDKit_xyz2sdf.py -i start.sdf -x xtbopt.xyz -o xtbopt.sdf
 ```
 
 这个脚本可以保留原有的拓扑，而将坐标更新为优化后的坐标（从xyz文件读入）来实现格式转化，这可以确保结构正确。
