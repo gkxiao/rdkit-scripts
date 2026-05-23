@@ -1,14 +1,17 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 """
 Calculate relative conformer energies from SDF properties.
 
-Supports automatic unit conversion:
-    hartree <-> kcal/mol
-
-Formula:
-    Rel_E(i) = E(i) - min(E)
+Features
+--------
+1. Read energies from any SDF property
+2. Calculate relative energies:
+       Rel_E(i) = E(i) - min(E)
+3. Automatic unit conversion:
+       hartree <-> kcal/mol
+4. Write relative energies to a user-defined property
 
 Author: ChatGPT
 """
@@ -16,44 +19,58 @@ Author: ChatGPT
 import argparse
 from rdkit import Chem
 
-# Conversion factor
+
+# =========================
+# Constants
+# =========================
+
 HARTREE_TO_KCAL = 627.509474
 KCAL_TO_HARTREE = 1.0 / HARTREE_TO_KCAL
 
+
+# =========================
+# Argument Parser
+# =========================
 
 def parse_args():
 
     parser = argparse.ArgumentParser(
         prog="calc_rel_energy.py",
+
         description=(
-            "Calculate relative energies for conformers "
-            "stored in an SDF file."
+            "Calculate relative conformer energies "
+            "from an SDF energy property."
         ),
+
         epilog=(
             "Examples:\n\n"
 
-            "1. Psi4 energy already in kcal/mol:\n"
+            "1. Psi4 energies already in kcal/mol:\n"
             "   python calc_rel_energy.py \\\n"
             "       -i input.sdf \\\n"
             "       -o output.sdf \\\n"
             '       --prop "Psi4_Energy (kcal/mol)" \\\n'
-            "       --unit kcal\n\n"
+            "       --unit kcal \\\n"
+            '       --outprop "Psi4_Rel_Energy"\n\n'
 
-            "2. xTB energy in hartree:\n"
-            "   python calc_rel_energy.py \\\n"
-            "       -i input.sdf \\\n"
-            "       -o output.sdf \\\n"
-            '       --prop "Energy_xTB" \\\n'
-            "       --unit hartree\n\n"
-
-            "3. Write relative energies in hartree:\n"
+            "2. xTB energies in hartree:\n"
             "   python calc_rel_energy.py \\\n"
             "       -i input.sdf \\\n"
             "       -o output.sdf \\\n"
             '       --prop "Energy_xTB" \\\n'
             "       --unit hartree \\\n"
-            "       --outunit hartree"
+            '       --outprop "Rel_Energy_xTB"\n\n'
+
+            "3. Output relative energies in hartree:\n"
+            "   python calc_rel_energy.py \\\n"
+            "       -i input.sdf \\\n"
+            "       -o output.sdf \\\n"
+            '       --prop "Energy_xTB" \\\n'
+            "       --unit hartree \\\n"
+            "       --outunit hartree \\\n"
+            '       --outprop "Rel_Energy_xTB"'
         ),
+
         formatter_class=argparse.RawTextHelpFormatter
     )
 
@@ -71,30 +88,29 @@ def parse_args():
 
     parser.add_argument(
         "--prop",
-        default="Psi4_Energy (kcal/mol)",
+        required=True,
         help=(
-            "Input energy property name\n"
-            'Default: "Psi4_Energy (kcal/mol)"'
+            "Input energy property name in SDF\n"
+            'Example: "Psi4_Energy (kcal/mol)"'
         )
     )
 
     parser.add_argument(
         "--unit",
         choices=["kcal", "hartree"],
-        default="kcal",
+        required=True,
         help=(
             "Unit of input energy property\n"
-            "Choices: kcal, hartree\n"
-            "Default: kcal"
+            "Choices: kcal, hartree"
         )
     )
 
     parser.add_argument(
         "--outprop",
-        default="Psi4_Rel_Energy",
+        required=True,
         help=(
-            "Output relative energy property name\n"
-            'Default: "Psi4_Rel_Energy"'
+            "Output property name for relative energies\n"
+            'Example: "Psi4_Rel_Energy"'
         )
     )
 
@@ -103,7 +119,7 @@ def parse_args():
         choices=["kcal", "hartree"],
         default="kcal",
         help=(
-            "Unit of output relative energies\n"
+            "Output unit for relative energies\n"
             "Choices: kcal, hartree\n"
             "Default: kcal"
         )
@@ -122,6 +138,10 @@ def parse_args():
     return parser.parse_args()
 
 
+# =========================
+# Read Molecules
+# =========================
+
 def read_molecules(sdf_file):
 
     suppl = Chem.SDMolSupplier(
@@ -139,6 +159,10 @@ def read_molecules(sdf_file):
     return mols
 
 
+# =========================
+# Unit Conversion
+# =========================
+
 def convert_to_kcal(value, unit):
 
     if unit == "kcal":
@@ -148,7 +172,9 @@ def convert_to_kcal(value, unit):
         return value * HARTREE_TO_KCAL
 
     else:
-        raise ValueError(f"Unsupported unit: {unit}")
+        raise ValueError(
+            f"Unsupported unit: {unit}"
+        )
 
 
 def convert_from_kcal(value, outunit):
@@ -160,16 +186,27 @@ def convert_from_kcal(value, outunit):
         return value * KCAL_TO_HARTREE
 
     else:
-        raise ValueError(f"Unsupported output unit: {outunit}")
+        raise ValueError(
+            f"Unsupported output unit: {outunit}"
+        )
 
 
-def get_energies(mols, prop_name, unit):
+# =========================
+# Read Energies
+# =========================
+
+def get_energies(
+    mols,
+    prop_name,
+    unit
+):
 
     energies_kcal = []
 
     for i, mol in enumerate(mols, start=1):
 
         if not mol.HasProp(prop_name):
+
             raise ValueError(
                 f'Molecule #{i} missing property: "{prop_name}"'
             )
@@ -180,16 +217,25 @@ def get_energies(mols, prop_name, unit):
             )
 
         except Exception:
+
             raise ValueError(
-                f'Cannot parse "{prop_name}" in molecule #{i}'
+                f'Cannot parse "{prop_name}" '
+                f'in molecule #{i}'
             )
 
-        e_kcal = convert_to_kcal(raw_e, unit)
+        e_kcal = convert_to_kcal(
+            raw_e,
+            unit
+        )
 
         energies_kcal.append(e_kcal)
 
     return energies_kcal
 
+
+# =========================
+# Calculate Relative Energies
+# =========================
 
 def add_relative_energies(
     mols,
@@ -201,8 +247,14 @@ def add_relative_energies(
 
     min_energy = min(energies_kcal)
 
-    print("\nMinimum energy:")
-    print(f"  {min_energy:.8f} kcal/mol\n")
+    print("\n===================================")
+    print(" Relative Energy Calculation")
+    print("===================================\n")
+
+    print(
+        f"Minimum energy : "
+        f"{min_energy:.8f} kcal/mol\n"
+    )
 
     fmt = f"{{:.{digits}f}}"
 
@@ -225,12 +277,22 @@ def add_relative_energies(
 
         print(
             f"Mol {i:4d} | "
-            f"RelE = {fmt.format(rel_out):>12s} "
+            f"RelE = "
+            f"{fmt.format(rel_out):>12s} "
             f"{outunit}"
         )
 
+    print()
 
-def write_sdf(mols, outfile):
+
+# =========================
+# Write SDF
+# =========================
+
+def write_sdf(
+    mols,
+    outfile
+):
 
     writer = Chem.SDWriter(outfile)
 
@@ -240,11 +302,20 @@ def write_sdf(mols, outfile):
     writer.close()
 
 
+# =========================
+# Main
+# =========================
+
 def main():
 
     args = parse_args()
 
+    print("\nReading molecules...")
     mols = read_molecules(args.input)
+
+    print(f"Loaded {len(mols)} molecules")
+
+    print("\nReading energies...")
 
     energies_kcal = get_energies(
         mols,
@@ -253,12 +324,14 @@ def main():
     )
 
     add_relative_energies(
-        mols,
-        energies_kcal,
-        args.outprop,
-        args.outunit,
-        args.digits
+        mols=mols,
+        energies_kcal=energies_kcal,
+        outprop=args.outprop,
+        outunit=args.outunit,
+        digits=args.digits
     )
+
+    print("Writing output SDF...")
 
     write_sdf(
         mols,
@@ -266,7 +339,7 @@ def main():
     )
 
     print("\nDone.")
-    print(f"Output written to: {args.output}")
+    print(f"Output written to: {args.output}\n")
 
 
 if __name__ == "__main__":
