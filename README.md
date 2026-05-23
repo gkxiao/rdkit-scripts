@@ -145,13 +145,25 @@ Example:
 
 也可以根据指定的性质列计算相对能量，并指定能量单位：
 
+Psi4(kcal/mol)
+
 ```bash
-calc_rel_energy.py \
+python calc_rel_energy.py \
+    -i input.sdf \
+    -o output.sdf \
+    --prop "Psi4_Energy (kcal/mol)" \
+    --unit kcal \
+    --outprop "Psi4_Rel_Energy"
+```
+
+xTB（Hartree转kcal/mol）
+```bash
+python calc_rel_energy.py \
     -i input.sdf \
     -o output.sdf \
     --prop "Energy_xTB" \
     --unit hartree \
-    --outunit kcal
+    --outprop "Rel_Energy_xTB"
 ```
 
 ## 从XYZ转SDF
