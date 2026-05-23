@@ -166,6 +166,24 @@ python calc_rel_energy.py \
     --outprop "Rel_Energy_xTB"
 ```
 
+## 用Crest补充构象系综搜索
+
+常规的方法很多时候会遗漏重要构象，`crest`可以作为补充方法，并并构象后进行分析：
+```
+crest input.xyz --v3 \
+--gfn2 \
+--chrg 0 \
+--uhf 0 \
+--ewin 10 \
+--mrest 10 \
+--T 16 \
+```
+
+其中:
+- `--mrest 10`增加 metadynamics restart 次数更容易找到隐藏构象
+- `-T 16` 使用 16 线程
+
+
 ## 从XYZ转SDF
 
 量化计算最常见的一个问题是，如何将XYZ转化为SDF，并归属正确的键类型、原子类型与Formal Charge。
