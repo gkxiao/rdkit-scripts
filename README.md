@@ -116,6 +116,33 @@ Psi4 计算结果分析: CONF_1_opt_fixed_Psi4.out
 ======================================================================
 ```
 
+## 构象系综的相对能量计算
+
+根据`Psi4CalculateEnergy.py`计算的单点能SDF结果文件中的`Psi4_Energy (kcal/mol)`进一步计算相对能量：
+```
+usage: calc_rel_energy.py [-h] -i INPUT -o OUTPUT
+                          [--prop PROP]
+                          [--outprop OUTPROP]
+
+Calculate relative energies for conformers in an SDF file using a specified energy property.
+
+options:
+  -h, --help            show this help message and exit
+  -i INPUT, --input INPUT
+                        Input multi-conformer SDF file
+  -o OUTPUT, --output OUTPUT
+                        Output SDF file
+  --prop PROP
+                        Energy property name in SDF
+                        Default: "Psi4_Energy (kcal/mol)"
+  --outprop OUTPROP
+                        Output relative energy property name
+                        Default: "Psi4_Rel_Energy"
+
+Example:
+  python calc_rel_energy.py -i input.sdf -o output.sdf
+```
+
 ## 从XYZ转SDF
 
 量化计算最常见的一个问题是，如何将XYZ转化为SDF，并归属正确的键类型、原子类型与Formal Charge。
