@@ -143,6 +143,17 @@ Example:
   python calc_rel_energy.py -i input.sdf -o output.sdf
 ```
 
+也可以根据指定的性质列计算相对能量，并指定能量单位：
+
+```bash
+calc_rel_energy.py \
+    -i input.sdf \
+    -o output.sdf \
+    --prop "Energy_xTB" \
+    --unit hartree \
+    --outunit kcal
+```
+
 ## 从XYZ转SDF
 
 量化计算最常见的一个问题是，如何将XYZ转化为SDF，并归属正确的键类型、原子类型与Formal Charge。
