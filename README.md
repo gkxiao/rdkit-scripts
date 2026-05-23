@@ -166,7 +166,7 @@ python calc_rel_energy.py \
     --outprop "Rel_Energy_xTB"
 ```
 
-## 用Crest补充构象系综搜索
+## 用Crest补充构象系综
 
 常规的方法很多时候会遗漏重要构象，`crest`可以作为补充方法，合并多种来源的构象后进行分析：
 ```
