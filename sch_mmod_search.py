@@ -8,15 +8,12 @@ from schrodinger import structure
 
 
 ###############################################################################
-# MacroModel COM formatter
+# MacroModel fixed-column formatter
 ###############################################################################
 
 def fmt(opcd,
         i1=0, i2=0, i3=0, i4=0,
         r1=0.0, r2=0.0, r3=0.0, r4=0.0):
-    """
-    Generate fixed-width MacroModel COM line.
-    """
 
     return (
         f" {opcd:<4}"
@@ -37,28 +34,25 @@ def fmt(opcd,
 
 parser = argparse.ArgumentParser(
     description="""
-Generate MacroModel LMCS conformational search inputs
-with:
+Generate MacroModel LMCS conformational search jobs.
 
-  - OPLS4 or OPLS2005
-  - independent random seeds
-  - aggressive flexible-ligand exploration
-  - optional automatic BatchMin execution
-
-Suitable for:
-  - flexible ligands
-  - IMHB systems
-  - folded conformers
-  - macrocycles
-  - PROTAC-like molecules
-""",
-    formatter_class=argparse.ArgumentDefaultsHelpFormatter
+Features:
+  - OPLS4 / OPLS2005
+  - replicate runs
+  - random seeds
+  - direct bmin execution
+  - MacroModel fixed-column formatting
+"""
 )
+
+###############################################################################
+# IO
+###############################################################################
 
 parser.add_argument(
     "-i", "--input",
     required=True,
-    help="Input MAE/MAEGZ file"
+    help="Input MAE/MAEGZ"
 )
 
 parser.add_argument(
@@ -67,11 +61,15 @@ parser.add_argument(
     help="Output directory"
 )
 
+###############################################################################
+# Mode
+###############################################################################
+
 parser.add_argument(
     "-m", "--mode",
     choices=["LMCS", "FLEXIBLE"],
     default="FLEXIBLE",
-    help="Preset search mode"
+    help="Search mode preset"
 )
 
 ###############################################################################
@@ -86,14 +84,14 @@ parser.add_argument(
 )
 
 ###############################################################################
-# Replicates / random seed
+# Replicates
 ###############################################################################
 
 parser.add_argument(
     "--nrep",
     type=int,
     default=3,
-    help="Number of independent replicate runs"
+    help="Number of replicate searches"
 )
 
 parser.add_argument(
@@ -104,91 +102,37 @@ parser.add_argument(
 )
 
 ###############################################################################
-# Search parameters
+# Optional overrides
 ###############################################################################
 
-parser.add_argument(
-    "--dielectric",
-    type=float,
-    default=None,
-    help="Effective dielectric constant"
-)
-
-parser.add_argument(
-    "--rmsd",
-    type=float,
-    default=None,
-    help="RMS pruning cutoff (Å)"
-)
-
-parser.add_argument(
-    "--steps",
-    type=int,
-    default=None,
-    help="LMCS search steps"
-)
-
-parser.add_argument(
-    "--mcnv",
-    type=int,
-    default=None,
-    help="Maximum torsions perturbed simultaneously"
-)
-
-parser.add_argument(
-    "--mcss",
-    type=float,
-    default=None,
-    help="Monte Carlo search scaling"
-)
-
-parser.add_argument(
-    "--ewin",
-    type=float,
-    default=None,
-    help="Primary energy window"
-)
-
-parser.add_argument(
-    "--ewin2",
-    type=float,
-    default=None,
-    help="Secondary energy window"
-)
-
-parser.add_argument(
-    "--maxkeep",
-    type=int,
-    default=None,
-    help="Maximum retained conformers"
-)
-
-parser.add_argument(
-    "--conv",
-    type=float,
-    default=None,
-    help="Minimization convergence threshold"
-)
-
-parser.add_argument(
-    "--mini",
-    type=int,
-    default=None,
-    help="Maximum minimization iterations"
-)
+parser.add_argument("--rmsd", type=float)
+parser.add_argument("--steps", type=int)
+parser.add_argument("--mcnv", type=int)
+parser.add_argument("--mcss", type=float)
+parser.add_argument("--ewin", type=float)
+parser.add_argument("--ewin2", type=float)
+parser.add_argument("--maxkeep", type=int)
+parser.add_argument("--conv", type=float)
+parser.add_argument("--mini", type=int)
+parser.add_argument("--bdco", type=float)
 
 ###############################################################################
-# Execution
+# Other options
 ###############################################################################
 
 parser.add_argument(
     "--run",
     action="store_true",
-    help="Automatically run BatchMin"
+    help="Run jobs immediately using bmin"
+)
+
+parser.add_argument(
+    "--first_only",
+    action="store_true",
+    help="Only process first structure"
 )
 
 args = parser.parse_args()
-
 
 ###############################################################################
 # Force field mapping
@@ -201,7 +145,6 @@ FF_MAP = {
 
 ffld = FF_MAP[args.ff]
 
-
 ###############################################################################
 # Presets
 ###############################################################################
@@ -209,7 +152,7 @@ ffld = FF_MAP[args.ff]
 if args.mode == "LMCS":
 
     defaults = {
-        "dielectric": 89.4427,
+        "bdco": 89.4427,
         "rmsd": 0.5,
         "steps": 1000,
         "mcnv": 5,
@@ -223,8 +166,14 @@ if args.mode == "LMCS":
 
 else:
 
+    ###########################################################################
+    # FLEXIBLE mode
+    #
+    # Aggressive bioactive conformer search
+    ###########################################################################
+
     defaults = {
-        "dielectric": 4.0,
+        "bdco": 89.4427,
         "rmsd": 0.25,
         "steps": 10000,
         "mcnv": 20,
@@ -236,9 +185,8 @@ else:
         "mini": 5000,
     }
 
-
 ###############################################################################
-# Fill unset values
+# Apply defaults
 ###############################################################################
 
 for key, value in defaults.items():
@@ -246,38 +194,48 @@ for key, value in defaults.items():
     if getattr(args, key) is None:
         setattr(args, key, value)
 
-
 ###############################################################################
-# Environment
+# SCHRODINGER env
 ###############################################################################
 
-schrodinger = os.environ.get("SCHRODINGER")
+SCHRODINGER = os.environ.get("SCHRODINGER")
 
-if schrodinger is None:
+if SCHRODINGER is None:
     raise RuntimeError(
-        "SCHRODINGER environment variable is not set."
+        "SCHRODINGER environment variable not set."
     )
+
+###############################################################################
+# Output directory
+###############################################################################
 
 os.makedirs(args.outdir, exist_ok=True)
 
-
 ###############################################################################
-# Read molecules
+# Read structures
 ###############################################################################
 
 reader = structure.StructureReader(args.input)
 
-for mol_idx, st in enumerate(reader, start=1):
+mol_count = 0
+job_count = 0
+
+for idx, st in enumerate(reader, start=1):
+
+    mol_count += 1
+
+    if args.first_only and idx > 1:
+        break
 
     title = st.title.strip()
 
     if not title:
-        title = f"mol_{mol_idx}"
+        title = f"mol_{idx}"
 
     title = title.replace(" ", "_")
 
     ###########################################################################
-    # Replicate runs
+    # Replicate jobs
     ###########################################################################
 
     for rep in range(1, args.nrep + 1):
@@ -285,20 +243,14 @@ for mol_idx, st in enumerate(reader, start=1):
         seed = args.seed + rep - 1
 
         jobname = (
-            f"{title}_"
-            f"{args.ff}_"
-            f"rep{rep}"
+            f"{title}_{args.ff}_rep{rep}"
         )
 
-        mae_file = os.path.join(
-            args.outdir,
-            f"{jobname}.mae"
-        )
+        mae_name = f"{jobname}.mae"
+        com_name = f"{jobname}.com"
 
-        com_file = os.path.join(
-            args.outdir,
-            f"{jobname}.com"
-        )
+        mae_file = os.path.join(args.outdir, mae_name)
+        com_file = os.path.join(args.outdir, com_name)
 
         output_maegz = f"{jobname}-out.maegz"
 
@@ -315,63 +267,35 @@ for mol_idx, st in enumerate(reader, start=1):
             writer.append(st)
 
         #######################################################################
-        # Build COM keywords
+        # Keyword list
         #######################################################################
 
         keywords = [
-
-            ###################################################################
-            # Basic
-            ###################################################################
 
             fmt("MMOD", 0, 1),
 
             fmt("DEBG", 55),
 
-            ###################################################################
-            # Force field
-            ###################################################################
-
             fmt("FFLD", ffld, 1, 0, 0, 1.0),
 
-            ###################################################################
-            # Solvent
-            ###################################################################
-
             fmt("SOLV", 3, 1),
-
-            ###################################################################
-            # Keep electrostatics enabled
-            ###################################################################
 
             fmt("EXNB"),
 
             ###################################################################
-            # Dielectric
+            # Long-range electrostatics cutoff
             ###################################################################
 
             fmt(
                 "BDCO",
                 0, 0, 0, 0,
-                args.dielectric,
+                args.bdco,
                 99999.0
             ),
 
-            ###################################################################
-            # Read structure
-            ###################################################################
-
             fmt("READ"),
 
-            ###################################################################
-            # Random seed
-            ###################################################################
-
             fmt("SEED", seed),
-
-            ###################################################################
-            # RMS pruning
-            ###################################################################
 
             fmt(
                 "CRMS",
@@ -380,26 +304,17 @@ for mol_idx, st in enumerate(reader, start=1):
                 args.rmsd
             ),
 
-            ###################################################################
-            # LMCS search
-            ###################################################################
-
             fmt(
                 "LMCS",
                 args.steps,
                 0, 0, 0,
-                0.0, 0.0, 3.0, 6.0
+                0.0,
+                0.0,
+                3.0,
+                6.0
             ),
 
-            ###################################################################
-            # Non-anti torsions
-            ###################################################################
-
             fmt("NANT"),
-
-            ###################################################################
-            # Torsion perturbation
-            ###################################################################
 
             fmt(
                 "MCNV",
@@ -407,29 +322,23 @@ for mol_idx, st in enumerate(reader, start=1):
                 args.mcnv
             ),
 
-            ###################################################################
-            # Search scaling
-            ###################################################################
-
             fmt(
                 "MCSS",
-                2, 0, 0, 0,
+                2,
+                0,
+                0,
+                0,
                 args.mcss
             ),
 
-            ###################################################################
-            # Monte Carlo optimization
-            ###################################################################
-
             fmt(
                 "MCOP",
-                1, 0, 0, 0,
+                1,
+                0,
+                0,
+                0,
                 0.5
             ),
-
-            ###################################################################
-            # Energy windows
-            ###################################################################
 
             fmt(
                 "DEMX",
@@ -441,73 +350,74 @@ for mol_idx, st in enumerate(reader, start=1):
                 args.ewin2
             ),
 
-            ###################################################################
-            # Symmetry
-            ###################################################################
-
             fmt("MSYM"),
-
-            ###################################################################
-            # Auto optimization
-            ###################################################################
 
             fmt(
                 "AUOP",
-                0, 0, 0, 0,
+                0,
+                0,
+                0,
+                0,
                 100.0
             ),
 
-            ###################################################################
-            # Automatic setup
-            ###################################################################
-
             fmt(
                 "AUTO",
-                0, 2, 1, 1,
-                0.0, 1.0, 0.0, 1.0
+                0,
+                2,
+                1,
+                1,
+                0.0,
+                1.0,
+                0.0,
+                1.0
             ),
-
-            ###################################################################
-            # Convergence
-            ###################################################################
 
             fmt(
                 "CONV",
-                2, 0, 0, 0,
+                2,
+                0,
+                0,
+                0,
                 args.conv
             ),
 
-            ###################################################################
-            # Minimization
-            ###################################################################
-
             fmt(
                 "MINI",
-                1, 0,
+                1,
+                0,
                 args.mini
             ),
         ]
 
         #######################################################################
-        # Write COM file
+        # Write COM
         #######################################################################
 
         with open(com_file, "w") as f:
 
-            f.write(f"{os.path.basename(mae_file)}\n")
+            ###################################################################
+            # IMPORTANT:
+            # trailing space is intentional
+            ###################################################################
+
+            f.write(f"{mae_name} \n")
+
             f.write(f"{output_maegz}\n")
 
             for line in keywords:
                 f.write(line + "\n")
 
         #######################################################################
-        # Run BatchMin
+        # Run
         #######################################################################
 
         if args.run:
 
+            print(f"[RUN] bmin {jobname}")
+
             cmd = [
-                os.path.join(schrodinger, "bmin"),
+                os.path.join(SCHRODINGER, "bmin"),
                 jobname
             ]
 
@@ -516,4 +426,14 @@ for mol_idx, st in enumerate(reader, start=1):
                 cwd=args.outdir
             )
 
-print("[INFO] All jobs completed.")
+        job_count += 1
+
+###############################################################################
+# Summary
+###############################################################################
+
+print("")
+print(f"[INFO] Structures processed : {mol_count}")
+print(f"[INFO] Replicates/job       : {args.nrep}")
+print(f"[INFO] Total jobs generated : {job_count}")
+print("[INFO] Finished.")
