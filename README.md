@@ -5,7 +5,7 @@
 通过以下方式调用：
 `python sasa.py input.pdb A 89`
 
-其中，input.pdb含有A、B两个残基，计算复合物与单体状态时指定残基的&Delta;SASA。
+其中，input.pdb含有A、B两个Chain，计算复合物与单体状态时指定残基的&Delta;SASA。
 
 ---
 
