@@ -72,6 +72,13 @@ parser.add_argument(
 )
 
 parser.add_argument(
+    "--ff",
+    choices=["opls4", "opls2005"],
+    default="opls4",
+    help="Force field"
+)
+
+parser.add_argument(
     "--nrep",
     type=int,
     default=3,
@@ -162,7 +169,12 @@ parser.add_argument(
 )
 
 args = parser.parse_args()
+FF_MAP = {
+    "opls2005": 14,
+    "opls4": 16,
+}
 
+ffld = FF_MAP[args.ff]
 
 ###############################################################################
 # Presets
@@ -269,9 +281,9 @@ for mol_idx, st in enumerate(reader, start=1):
             fmt("MMOD", 0, 1),
 
             fmt("DEBG", 55),
-
-            # OPLS4
-            fmt("FFLD", 16, 1, 0, 0, 1.0),
+ 
+            # OPLS4 16， OPLS2025 14
+            fmt("FFLD", ffld, 1, 0, 0, 1.0),
 
             # GBSA water
             fmt("SOLV", 3, 1),
