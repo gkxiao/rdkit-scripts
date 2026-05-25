@@ -1,37 +1,30 @@
 #!/usr/bin/env python
 
-"""
-merge_dedup_mae.py
+# ============================================================
+# merge_dedup_mae.py
+#
+# Merge multiple MacroModel conformer ensembles
+# and remove duplicate conformers by heavy-atom RMSD
+#
+# Compatible with older Schrödinger versions
+#
+# Usage:
+#
+# $SCHRODINGER/run merge_dedup_mae.py \
+#     -i rep1-out.maegz rep2-out.maegz rep3-out.maegz \
+#     -o merged_unique.maegz
+#
+# Advanced:
+#
+# $SCHRODINGER/run merge_dedup_mae.py \
+#     -i *.maegz \
+#     -o merged_unique.maegz \
+#     --rmsd 0.5 \
+#     --sort_energy \
+#     --max_keep 500
+#
+# ============================================================
 
-Merge multiple MacroModel conformer ensembles and remove duplicates
-based on heavy-atom RMSD.
-
-Features
---------
-1. Merge multiple .mae/.maegz files
-2. Heavy-atom RMSD deduplication
-3. Compatible with older Schrödinger APIs
-4. Works well for MacroModel conformers
-5. Optional energy sorting
-6. Symmetry-independent robust workflow
-
-Usage
------
-$SCHRODINGER/run merge_dedup_mae.py \
-    -i rep1-out.maegz rep2-out.maegz rep3-out.maegz \
-    -o merged_unique.maegz
-
-Advanced
---------
-$SCHRODINGER/run merge_dedup_mae.py \
-    -i *.maegz \
-    -o merged_unique.maegz \
-    --rmsd 0.5 \
-    --max_keep 500 \
-    --sort_energy
-"""
-
-import os
 import sys
 import argparse
 
@@ -40,7 +33,7 @@ from schrodinger.structutils import rmsd
 
 
 # ============================================================
-# Argument Parser
+# Parse Arguments
 # ============================================================
 
 def parse_args():
@@ -72,13 +65,6 @@ def parse_args():
     )
 
     parser.add_argument(
-        "--max_keep",
-        type=int,
-        default=0,
-        help="Maximum number of conformers to keep (0=no limit)"
-    )
-
-    parser.add_argument(
         "--sort_energy",
         action="store_true",
         help="Sort conformers by energy before deduplication"
@@ -91,7 +77,35 @@ def parse_args():
              "(default: r_mmod_Potential_Energy-OPLS)"
     )
 
+    parser.add_argument(
+        "--max_keep",
+        type=int,
+        default=0,
+        help="Maximum number of conformers to keep "
+             "(0 = no limit)"
+    )
+
     return parser.parse_args()
+
+
+# ============================================================
+# Remove Hydrogens
+# ============================================================
+
+def remove_hydrogens(st):
+
+    st2 = st.copy()
+
+    h_atoms = [
+        atom.index
+        for atom in st2.atom
+        if atom.atomic_number == 1
+    ]
+
+    if len(h_atoms) > 0:
+        st2.deleteAtoms(h_atoms)
+
+    return st2
 
 
 # ============================================================
@@ -100,32 +114,26 @@ def parse_args():
 
 def calc_heavy_rmsd(st1, st2):
 
-    heavy_atoms1 = [
-        atom.index
-        for atom in st1.atom
-        if atom.atomic_number > 1
-    ]
-
-    heavy_atoms2 = [
-        atom.index
-        for atom in st2.atom
-        if atom.atomic_number > 1
-    ]
-
     try:
 
+        st1_hvy = remove_hydrogens(st1)
+        st2_hvy = remove_hydrogens(st2)
+
+        atoms1 = [atom.index for atom in st1_hvy.atom]
+        atoms2 = [atom.index for atom in st2_hvy.atom]
+
         val = rmsd.calculate_in_place_rmsd(
-            st1,
-            st2,
-            atom_list1=heavy_atoms1,
-            atom_list2=heavy_atoms2
+            st1_hvy,
+            atoms1,
+            st2_hvy,
+            atoms2
         )
 
         return val
 
     except Exception as e:
 
-        print(f"[WARNING] RMSD failed: {e}")
+        print("[WARNING] RMSD failed:", e)
 
         return 999.0
 
@@ -140,18 +148,24 @@ def read_structures(files):
 
     for f in files:
 
-        print(f"[INFO] Reading {f}")
+        print("[INFO] Reading:", f)
 
         reader = structure.StructureReader(f)
 
+        count = 0
+
         for st in reader:
+
             structs.append(st)
+            count += 1
+
+        print(f"[INFO]   {count} conformers loaded")
 
     return structs
 
 
 # ============================================================
-# Energy Extraction
+# Get Energy
 # ============================================================
 
 def get_energy(st, propname):
@@ -182,18 +196,19 @@ def deduplicate(structs, rmsd_cutoff):
             r = calc_heavy_rmsd(st, ust)
 
             if r < rmsd_cutoff:
+
                 is_duplicate = True
                 break
 
         if not is_duplicate:
-
             unique.append(st)
 
-        if (i + 1) % 10 == 0 or (i + 1) == total:
+        # progress
+        if ((i + 1) % 10 == 0) or ((i + 1) == total):
 
             print(
-                f"[INFO] Processed "
-                f"{i+1}/{total} "
+                "[INFO] Processed "
+                f"{i+1}/{total} | "
                 f"Unique={len(unique)}"
             )
 
@@ -223,17 +238,17 @@ def main():
     args = parse_args()
 
     # --------------------------------------------------------
-    # Read
+    # Read all conformers
     # --------------------------------------------------------
 
     structs = read_structures(args.input)
 
-    print(f"[INFO] Total conformers read: {len(structs)}")
+    print()
+    print(f"[INFO] Total conformers loaded: {len(structs)}")
 
     if len(structs) == 0:
 
-        print("[ERROR] No structures found")
-
+        print("[ERROR] No conformers found")
         sys.exit(1)
 
     # --------------------------------------------------------
@@ -255,8 +270,9 @@ def main():
     # Deduplicate
     # --------------------------------------------------------
 
+    print()
     print(
-        f"[INFO] Deduplicating "
+        "[INFO] Removing duplicates "
         f"(RMSD cutoff = {args.rmsd:.2f} Å)"
     )
 
@@ -274,19 +290,29 @@ def main():
         unique = unique[:args.max_keep]
 
     # --------------------------------------------------------
-    # Write
+    # Write output
     # --------------------------------------------------------
+
+    print()
+    print("[INFO] Writing output:", args.output)
 
     write_output(unique, args.output)
 
-    print()
+    # --------------------------------------------------------
+    # Summary
+    # --------------------------------------------------------
 
+    print()
+    print("================================================")
     print("[INFO] Finished")
-    print(f"[INFO] Final conformers: {len(unique)}")
-    print(f"[INFO] Output: {args.output}")
+    print(f"[INFO] Input conformers : {len(structs)}")
+    print(f"[INFO] Unique conformers: {len(unique)}")
+    print(f"[INFO] Output written to: {args.output}")
+    print("================================================")
 
 
 # ============================================================
 
 if __name__ == "__main__":
+
     main()
