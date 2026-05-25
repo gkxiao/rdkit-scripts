@@ -8,7 +8,7 @@ from schrodinger import structure
 
 
 ###############################################################################
-# MacroModel formatter
+# MacroModel COM formatter
 ###############################################################################
 
 def fmt(opcd,
@@ -38,16 +38,19 @@ def fmt(opcd,
 parser = argparse.ArgumentParser(
     description="""
 Generate MacroModel LMCS conformational search inputs
-using OPLS4 with independent random seeds.
+with:
 
-Designed for:
-  - bioactive conformer exploration
+  - OPLS4 or OPLS2005
+  - independent random seeds
+  - aggressive flexible-ligand exploration
+  - optional automatic BatchMin execution
+
+Suitable for:
   - flexible ligands
-  - folded states
-  - IMHB-rich molecules
-  - PROTAC-like systems
-
-Each replicate uses a different SEED keyword.
+  - IMHB systems
+  - folded conformers
+  - macrocycles
+  - PROTAC-like molecules
 """,
     formatter_class=argparse.ArgumentDefaultsHelpFormatter
 )
@@ -71,12 +74,20 @@ parser.add_argument(
     help="Preset search mode"
 )
 
+###############################################################################
+# Force field
+###############################################################################
+
 parser.add_argument(
     "--ff",
     choices=["opls4", "opls2005"],
     default="opls4",
     help="Force field"
 )
+
+###############################################################################
+# Replicates / random seed
+###############################################################################
 
 parser.add_argument(
     "--nrep",
@@ -92,6 +103,10 @@ parser.add_argument(
     help="Base random seed"
 )
 
+###############################################################################
+# Search parameters
+###############################################################################
+
 parser.add_argument(
     "--dielectric",
     type=float,
@@ -103,7 +118,7 @@ parser.add_argument(
     "--rmsd",
     type=float,
     default=None,
-    help="RMS pruning cutoff"
+    help="RMS pruning cutoff (Å)"
 )
 
 parser.add_argument(
@@ -117,7 +132,7 @@ parser.add_argument(
     "--mcnv",
     type=int,
     default=None,
-    help="Maximum torsions perturbed"
+    help="Maximum torsions perturbed simultaneously"
 )
 
 parser.add_argument(
@@ -162,6 +177,10 @@ parser.add_argument(
     help="Maximum minimization iterations"
 )
 
+###############################################################################
+# Execution
+###############################################################################
+
 parser.add_argument(
     "--run",
     action="store_true",
@@ -169,12 +188,19 @@ parser.add_argument(
 )
 
 args = parser.parse_args()
+
+
+###############################################################################
+# Force field mapping
+###############################################################################
+
 FF_MAP = {
     "opls2005": 14,
     "opls4": 16,
 }
 
 ffld = FF_MAP[args.ff]
+
 
 ###############################################################################
 # Presets
@@ -212,7 +238,7 @@ else:
 
 
 ###############################################################################
-# Fill missing parameters
+# Fill unset values
 ###############################################################################
 
 for key, value in defaults.items():
@@ -228,7 +254,9 @@ for key, value in defaults.items():
 schrodinger = os.environ.get("SCHRODINGER")
 
 if schrodinger is None:
-    raise RuntimeError("SCHRODINGER environment variable is not set.")
+    raise RuntimeError(
+        "SCHRODINGER environment variable is not set."
+    )
 
 os.makedirs(args.outdir, exist_ok=True)
 
@@ -256,14 +284,28 @@ for mol_idx, st in enumerate(reader, start=1):
 
         seed = args.seed + rep - 1
 
-        jobname = f"{title}_rep{rep}"
+        jobname = (
+            f"{title}_"
+            f"{args.ff}_"
+            f"rep{rep}"
+        )
 
-        mae_file = os.path.join(args.outdir, f"{jobname}.mae")
-        com_file = os.path.join(args.outdir, f"{jobname}.com")
+        mae_file = os.path.join(
+            args.outdir,
+            f"{jobname}.mae"
+        )
+
+        com_file = os.path.join(
+            args.outdir,
+            f"{jobname}.com"
+        )
 
         output_maegz = f"{jobname}-out.maegz"
 
-        print(f"[INFO] Generating {jobname}  (SEED={seed})")
+        print(
+            f"[INFO] Generating {jobname} "
+            f"(SEED={seed}, FF={args.ff})"
+        )
 
         #######################################################################
         # Write MAE
@@ -273,25 +315,41 @@ for mol_idx, st in enumerate(reader, start=1):
             writer.append(st)
 
         #######################################################################
-        # MacroModel keywords
+        # Build COM keywords
         #######################################################################
 
         keywords = [
 
+            ###################################################################
+            # Basic
+            ###################################################################
+
             fmt("MMOD", 0, 1),
 
             fmt("DEBG", 55),
- 
-            # OPLS4 16， OPLS2025 14
+
+            ###################################################################
+            # Force field
+            ###################################################################
+
             fmt("FFLD", ffld, 1, 0, 0, 1.0),
 
-            # GBSA water
+            ###################################################################
+            # Solvent
+            ###################################################################
+
             fmt("SOLV", 3, 1),
 
-            # keep electrostatics
+            ###################################################################
+            # Keep electrostatics enabled
+            ###################################################################
+
             fmt("EXNB"),
 
-            # dielectric
+            ###################################################################
+            # Dielectric
+            ###################################################################
+
             fmt(
                 "BDCO",
                 0, 0, 0, 0,
@@ -299,12 +357,22 @@ for mol_idx, st in enumerate(reader, start=1):
                 99999.0
             ),
 
+            ###################################################################
+            # Read structure
+            ###################################################################
+
             fmt("READ"),
 
-            # random seed
+            ###################################################################
+            # Random seed
+            ###################################################################
+
             fmt("SEED", seed),
 
+            ###################################################################
             # RMS pruning
+            ###################################################################
+
             fmt(
                 "CRMS",
                 0, 0, 0, 0,
@@ -312,7 +380,10 @@ for mol_idx, st in enumerate(reader, start=1):
                 args.rmsd
             ),
 
+            ###################################################################
             # LMCS search
+            ###################################################################
+
             fmt(
                 "LMCS",
                 args.steps,
@@ -320,30 +391,46 @@ for mol_idx, st in enumerate(reader, start=1):
                 0.0, 0.0, 3.0, 6.0
             ),
 
+            ###################################################################
+            # Non-anti torsions
+            ###################################################################
+
             fmt("NANT"),
 
-            # torsion perturbation
+            ###################################################################
+            # Torsion perturbation
+            ###################################################################
+
             fmt(
                 "MCNV",
                 1,
                 args.mcnv
             ),
 
-            # MC scaling
+            ###################################################################
+            # Search scaling
+            ###################################################################
+
             fmt(
                 "MCSS",
                 2, 0, 0, 0,
                 args.mcss
             ),
 
-            # MC optimization
+            ###################################################################
+            # Monte Carlo optimization
+            ###################################################################
+
             fmt(
                 "MCOP",
                 1, 0, 0, 0,
                 0.5
             ),
 
-            # energy windows
+            ###################################################################
+            # Energy windows
+            ###################################################################
+
             fmt(
                 "DEMX",
                 0,
@@ -354,7 +441,15 @@ for mol_idx, st in enumerate(reader, start=1):
                 args.ewin2
             ),
 
+            ###################################################################
+            # Symmetry
+            ###################################################################
+
             fmt("MSYM"),
+
+            ###################################################################
+            # Auto optimization
+            ###################################################################
 
             fmt(
                 "AUOP",
@@ -362,17 +457,29 @@ for mol_idx, st in enumerate(reader, start=1):
                 100.0
             ),
 
+            ###################################################################
+            # Automatic setup
+            ###################################################################
+
             fmt(
                 "AUTO",
                 0, 2, 1, 1,
                 0.0, 1.0, 0.0, 1.0
             ),
 
+            ###################################################################
+            # Convergence
+            ###################################################################
+
             fmt(
                 "CONV",
                 2, 0, 0, 0,
                 args.conv
             ),
+
+            ###################################################################
+            # Minimization
+            ###################################################################
 
             fmt(
                 "MINI",
@@ -382,7 +489,7 @@ for mol_idx, st in enumerate(reader, start=1):
         ]
 
         #######################################################################
-        # Write COM
+        # Write COM file
         #######################################################################
 
         with open(com_file, "w") as f:
