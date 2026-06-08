@@ -194,3 +194,30 @@ RDKit_xyz2sdf.py -i start.sdf -x xtbopt.xyz -o xtbopt.sdf
 ```
 
 这个脚本可以保留原有的拓扑，而将坐标更新为优化后的坐标（从xyz文件读入）来实现格式转化，这可以确保结构正确。
+
+## Schrodinger
+1. 构象搜索
+```
+sch_mmod_csearch.py -i 4zlz_ligand.maegz -o 1_mmod_csearch -m LMCS --ff opls2005 --run
+```
+2. 构象合并
+```
+cd 1_mmod_csearch
+sch_confs_merge.py -i `ls *-out.maegz` -o 4zlz_ligand_confs.maegz
+$SCHRODINGER/utilities/structconvert 4zlz_ligand_confs.maegz 4zlz_ligand_confs.sdf
+```
+3. xtb几何优化
+```
+mkdir 2_xtbopt
+$SCHRODINGER/utilities/obabel -isdf 4zlz_ligand_confs.sdf -oxyz -O 2_xtbopt/CONF_.xyz -m
+cd 2_xtbopt
+n=`ls *.xyz|wc -l`
+for i in `seq 1 ${n}`
+do
+xtb CONF_${i}.xyz --opt tight -c 0 -u 0 --alpb water --namespace CONF_${i}
+cat CONF_${i}.xtbopt.xyz >> ensemble.xtbopt.xyz
+done
+```
+得到构象系综`ensemble.xtbopt.xyz`，接下来要进行构象聚类
+
+
