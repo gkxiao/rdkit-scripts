@@ -218,6 +218,7 @@ xtb CONF_${i}.xyz --opt tight -c 0 -u 0 --alpb water --namespace CONF_${i}
 cat CONF_${i}.xtbopt.xyz >> ensemble.xtbopt.xyz
 done
 ```
-得到构象系综`ensemble.xtbopt.xyz`，接下来要进行构象聚类
+其中，xtb可以使用$SCHRODINGER/run xtb来代替。
+这个优化过程，可以写成脚本`xtbopt_batch.sh`来实现。最后得到构象系综`ensemble.xtbopt.xyz`，接下来要进行构象聚类。
 
 
