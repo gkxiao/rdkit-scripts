@@ -374,4 +374,4 @@ Current xTB search window appears sufficient.
 
 注意：`Bayesian Recovery Predictor`这部分，在代码里是`LogisticRegression`，严格来说不是`Bayesian model`，虽然在过程上采用了“Bayesian/probabilistic decision thinking”。也许改为`Bayesian-Inspired Recovery Predictor`更合适：不是 Bayesian inference，但采用了 Bayesian-style probabilistic decision framework。属于模型外推，而不是 Recovery Analysis 的直接观测结果。
 
-最终的目标是：在一个已经确定的 CREST ensemble 中，根据当前已经完成的 DFT SPE，辅助判断是否值得继续花计算资源。Logistic Regression 只是提供一个：“如果按照目前观察到的规律外推，剩余 conformers 还可能有多少 target？” ，作为辅助证据，可以契合目标。
+最终的目标是：在一个已经确定的 CREST ensemble 中，根据当前已经完成的 DFT SPE，辅助判断是否值得继续花计算资源。Logistic Regression 只是提供一个：“如果按照目前观察到的规律外推，剩余 conformers 还可能有多少 target？” ，作为辅助证据，可以契合目标。虽然Bayesion回归会给出不确定性（比如：95% credible interval = 0.1–4.5%），但这个似乎并无大用。
