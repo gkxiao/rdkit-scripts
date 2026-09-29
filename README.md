@@ -284,7 +284,7 @@ DFT SPE：1000 / 1000
 
 ### 示例
 
-Flare进行初始的基于力场的构象搜索、Flare Ligand QM进行几何优化(xTB GFN2)、构象去重，得到起始的构象系综（xtb_ensemble.sdf）, 再在R2SCAN-3c理论水平进行单点能计算（ensemble_spe.sdf）, 现在要评估DFT ewin=3 kcal/mol 构象系综。
+Flare进行初始的基于力场的构象搜索、Flare Ligand QM进行几何优化(xTB GFN2)、构象去重，得到起始的构象系综（xtb_ensemble.sdf）, 接着在R2SCAN-3c理论水平进行单点能计算（ensemble_spe.sdf）, 现在要评估DFT ewin=3 kcal/mol 构象系综。
 
 ```bash
 ./dft_ensemble_ana.py --crest xtb_ensemble.sdf --spe ensemble_spe.sdf --ewin 3
