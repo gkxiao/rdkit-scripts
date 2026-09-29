@@ -367,3 +367,9 @@ DFT calculations are essentially complete.
 
 Current xTB search window appears sufficient.
 ```
+
+我个人最喜欢`Recovery Analysis`这个部分。在 3 kcal/mol 的 DFT target window 内，目前发现了 11 个 target；最后一个 target 位于 xTB 相对能量 2.55 kcal/mol。此后，沿 xTB 能量升高方向又观察了 14 个连续的 DFT non-target conformers，覆盖了额外 5.23 kcal/mol 的 xTB 能量范围，但没有产生新的 DFT target。而对于正在进行DFT计算的项目，这不是证明“后面没有 target”，而是根据目前观察到的结果，判断继续计算的边际收益是否已经越来越小。
+
+在`Coverage Risk Assessment`部分, 给出Coverage Risk Level的评估是“Low”，Low这种等级依据何来？是否合理需要进一步权衡。
+
+注意：`Bayesian Recovery Predictor`这部分，在代码里是`LogisticRegression`，严格来说不是`Bayesian model`，虽然在过程上采用了“Bayesian/probabilistic decision thinking”。也许改为`Bayesian-Inspired Recovery Predictor`更合适：不是 Bayesian inference，但采用了 Bayesian-style probabilistic decision framework。属于模型外推，而不是 Recovery Analysis 的直接观测结果。
