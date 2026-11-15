@@ -1,7 +1,9 @@
-#!/schrodinger2026-2/run
+#!/usr/bin/env python
 import argparse
 import os
+import shutil
 import stat
+
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Generate Schrödinger Multi-stage IFD input configuration and submission script.")
     parser.add_argument("-receptor", required=True, help="受体结构文件路径 (例如: 4IVC_W1305.maegz)")
@@ -29,7 +31,6 @@ def main():
         print(f"  -> {desc}: {filepath}")
 
     # 核心步骤：自动将参考配体合并进受体结构中，并赋予 Chain Z, Resnum 999
-    # 这样才能完美支持模板中的 BINDING_SITE ligand Z:999 语法
     prepared_receptor_filename = f"{args.jobname}_rec.mae"
     print(f"  -> 正在处理受体与参考配体合并，输出至: {prepared_receptor_filename}")
     
@@ -58,19 +59,24 @@ def main():
     except Exception as e:
         raise RuntimeError(f"处理受体与参考配体合并时出错: {e}")
 
-    # 处理核心约束相关参数块
+    # 处理核心约束文件路径：自动复制到当前工作目录下，彻底解决多阶段子任务寻址失败
     core_block = ""
     if args.core:
-        if not os.path.exists(args.core):
-            raise FileNotFoundError(f"Error: 找不到指定的核心约束文件: {args.core}")
-        print(f"  -> 核心约束文件: {args.core} (已启用 MCS 约束)")
+        core_src_path = os.path.abspath(args.core)
+        if not os.path.exists(core_src_path):
+            raise FileNotFoundError(f"Error: 找不到指定的核心约束文件: {core_src_path}")
+        
+        local_core_file = f"{args.jobname}_reflig.maegz"
+        shutil.copy(core_src_path, local_core_file)
+        print(f"  -> 核心约束文件已同步到本地: {local_core_file} (已启用 MCS 约束)")
+        
         core_block = f"""
   DOCKING_CORE_RESTRAIN YES
   DOCKING_CORE_FILTER YES
   DOCKING_USE_REF_LIGAND YES
   DOCKING_CORE_POS_MAX_RMSD 1.0
   DOCKING_CORE_DEFINITION mcssmarts
-  DOCKING_REF_LIGAND_FILE {args.core}"""
+  DOCKING_REF_LIGAND_FILE {local_core_file}"""
     else:
         print("  -> 未指定核心约束文件 (-core)，将不使用核心约束。")
         core_block = "\n  DOCKING_CORE_RESTRAIN NO"
@@ -83,7 +89,6 @@ def main():
     
     in_filename = f"{args.jobname}.inp"
     
-    # 严格按照您提供的成功模板格式构建内容，使用 BINDING_SITE ligand Z:999
     ifd_in_content = f"""# Automatically generated Schrödinger Multi-stage IFD input file
 
 INPUT_FILE {prepared_receptor_filename}
