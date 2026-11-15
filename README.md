@@ -196,6 +196,9 @@ RDKit_xyz2sdf.py -i start.sdf -x xtbopt.xyz -o xtbopt.sdf
 这个脚本可以保留原有的拓扑，而将坐标更新为优化后的坐标（从xyz文件读入）来实现格式转化，这可以确保结构正确。
 
 ## Schrodinger
+
+schrodinger2026-2 document: `https://learn.schrodinger.com/public/python_api/2026-2/overview.html`
+
 1. 构象搜索
 ```
 sch_mmod_csearch.py -i 4zlz_ligand.maegz -o 1_mmod_csearch -m LMCS --ff opls2005 --run
