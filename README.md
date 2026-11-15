@@ -195,7 +195,7 @@ RDKit_xyz2sdf.py -i start.sdf -x xtbopt.xyz -o xtbopt.sdf
 
 这个脚本可以保留原有的拓扑，而将坐标更新为优化后的坐标（从xyz文件读入）来实现格式转化，这可以确保结构正确。
 
-## Schrodinger
+## Schrodinger macromodel构象搜索
 
 schrodinger2026-2 document: `https://learn.schrodinger.com/public/python_api/2026-2/overview.html`
 
@@ -256,6 +256,39 @@ python rdkit_mae_split.py 4IVC_W1305.maegz --mode receptor --prefix 4ivc
 python rdkit_mae_split.py 4IVC_W1305.maegz --mode all --prefix 4ivc
 
 ```
+
+### 使用之前
+
+如果忘记`4IVC_W1305.maegz`里面是否有配体，可以用`rkdit_mae_analyze.py`进行成分分析：
+
+```
+rdkit_mae_analyze.py 4IVC_W1305.maegz
+```
+
+* 会输出如下样式内容：
+
+```
+==================================================
+ 文件分析报告: 4IVC_W1305.maegz
+ 目标 Entry 标题: 4IVC_chainA-W1305
+==================================================
+
+【成分数量统计】
+  • Protein (Chains/Fragments): 1 个
+  • Ligand: 1 个
+  • Solvent (Water): 1 个
+  • Metal Ion: 0 个
+  • Cofactor: 0 个
+  • Other: 0 个
+
+【详细组成清单】
+  - [溶剂水分子] 总计: 1 个
+  - [蛋白质片段 1] 原子数: 4864
+  - [配体] 分子式: C18H21N5O, 分子量: 323.4, 原子数: 45
+==================================================
+```
+
+这有助于你在进行结构拆分前进行决策。
 
 ## 混合精度的构象系综分析
 
