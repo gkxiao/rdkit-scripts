@@ -224,7 +224,7 @@ done
 其中，xtb可以使用$SCHRODINGER/run xtb来代替。
 这个优化过程，可以写成脚本`xtbopt_batch.sh`来实现。最后得到构象系综`ensemble.xtbopt.xyz`，接下来要进行构象聚类。
 
-## SCHRODINGER Protein prepare wizard准备结构的处理
+## MAE格式复合物结构的拆分
 
 `rdkit_mae_split.py`将复合物（PoseViewer Complex）拆分并导出为独立的受体（Receptor mode）**和**配体（Ligand mode）文件（例如分别保存为蛋白 PDB/MAE 和配体 SDF/MAE）。
 
