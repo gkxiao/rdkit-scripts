@@ -224,6 +224,38 @@ done
 其中，xtb可以使用$SCHRODINGER/run xtb来代替。
 这个优化过程，可以写成脚本`xtbopt_batch.sh`来实现。最后得到构象系综`ensemble.xtbopt.xyz`，接下来要进行构象聚类。
 
+## SCHRODINGER Protein prepare wizard准备结构的处理
+
+`rdkit_mae_split.py`将复合物（PoseViewer Complex）拆分并导出为独立的受体（Receptor mode）**和**配体（Ligand mode）文件（例如分别保存为蛋白 PDB/MAE 和配体 SDF/MAE）。
+
+在处理准备好的复合物（如对接或 PoseViewer 结果）时，RDKit 读取到的整个 CT（Connection Table）包含了所有原子。通过 `GetMolFrags(st, asMols=True, sanitizeFrags=False)` 可以将它们拆分为独立的分子：
+
+1. **配体（Ligand）识别**：原子数适中（通常在 10~100 之间）、不属于水（$\text{H}_2\text{O}$）、不属于金属离子、且不是巨型高分子（原子数 $< 50$ 且非标准氨基酸）。
+2. **受体（Receptor / Protein）识别**：原子数极大（通常 $> 50$）的蛋白质多肽链。
+3. **溶剂与辅因子成分**：水分子、金属离子等可以根据需求选择保留或剔除。
+
+### 如何使用该脚本？
+
+1. **仅提取配体（类似 Ligand mode）**：
+```bash
+python rd_mae_split.py 4IVC_W1305.maegz --mode ligand --prefix 4ivc
+```
+
+* 会在当前目录下生成 `4ivc_ligand.sdf`，里面精准包含了结合口袋中的小分子配体。
+
+2. **仅提取受体（类似 Receptor mode）**：
+```bash
+python rd_mae_split.py 4IVC_W1305.maegz --mode receptor --prefix 4ivc
+```
+
+* 会在当前目录下生成 `4ivc_receptor.pdb`，包含了对接或准备好的蛋白骨架结构。
+
+
+3. **同时导出**：
+```bash
+python rd_mae_split.py 4IVC_W1305.maegz --mode all --prefix 4ivc
+
+```
 
 ## 混合精度的构象系综分析
 
