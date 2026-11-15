@@ -1,18 +1,18 @@
+#!/schrodinger2026-2/run
 import argparse
 import os
 import stat
-
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Generate Schrödinger Multi-stage IFD input configuration and submission script.")
-    parser.add_argument("-receptor", required=True, help="受体结构文件路径 (例如: InducedFit_jak1_rec.mae)")
-    parser.add_argument("-site", required=True, help="结合位点参考残基或文件 (例如: A:1201 或 参考配体)")
+    parser.add_argument("-receptor", required=True, help="受体结构文件路径 (例如: 4IVC_W1305.maegz)")
+    parser.add_argument("-site", required=True, help="结合位点参考配体文件路径 (例如: ../4ivc_ligand.sdf)")
     parser.add_argument("-dbase", required=True, help="待对接的配体数据库文件路径 (.sdf 或 .maegz)")
     parser.add_argument("-core", default=None, help="MCS 公共子结构核心约束文件路径 (例如: core.maegz，可选)")
     parser.add_argument("-ewin", type=float, default=20.0, help="配体环构象采样能量窗口 / Ringconfcut (默认: 20.0)")
     parser.add_argument("-max-n-pose", type=int, default=5, help="Glide 对接每配体保留的最大构象数 (默认: 5)")
-    parser.add_argument("-ncpu", type=int, default=8, help="计算核心数 (默认: 8)")
+    parser.add_argument("-ncpu", type=int, default=60, help="计算核心数 (默认: 60)")
     parser.add_argument("-host", default="localhost", help="计算节点主机名 (默认: localhost)")
-    parser.add_argument("-jobname", default="ifd_run", help="作业名称 (默认: ifd_run)")
+    parser.add_argument("-jobname", default="ifd_job", help="作业名称 (默认: ifd_job)")
     return parser.parse_args()
 
 def main():
@@ -21,11 +21,42 @@ def main():
     print("=== 1. 检查输入文件与参数 ===")
     for filepath, desc in [
         (args.receptor, "受体文件"), 
+        (args.site, "结合位点参考配体"),
         (args.dbase, "对接数据库")
     ]:
         if not os.path.exists(filepath):
             raise FileNotFoundError(f"Error: 找不到指定的{desc}: {filepath}")
         print(f"  -> {desc}: {filepath}")
+
+    # 核心步骤：自动将参考配体合并进受体结构中，并赋予 Chain Z, Resnum 999
+    # 这样才能完美支持模板中的 BINDING_SITE ligand Z:999 语法
+    prepared_receptor_filename = f"{args.jobname}_rec.mae"
+    print(f"  -> 正在处理受体与参考配体合并，输出至: {prepared_receptor_filename}")
+    
+    try:
+        from schrodinger import structure
+        
+        # 读取受体
+        rec_st = next(structure.StructureReader(args.receptor))
+        
+        # 读取参考配体
+        site_st = next(structure.StructureReader(args.site))
+        
+        # 将参考配体原子赋予 Chain Z, Residue number 999 (Residue name: LIG)
+        for atom in site_st.atom:
+            atom.chain = 'Z'
+            atom.resnum = 999
+            atom.resname = 'LIG'
+            
+        # 将参考配体合并到受体结构中
+        rec_st.extend(site_st)
+        
+        # 保存合并后的受体文件
+        rec_st.write(prepared_receptor_filename)
+        print("  -> 受体与参考配体合并成功！")
+        
+    except Exception as e:
+        raise RuntimeError(f"处理受体与参考配体合并时出错: {e}")
 
     # 处理核心约束相关参数块
     core_block = ""
@@ -48,17 +79,17 @@ def main():
     print(f"  -> 最大构象数 (Poses per lig): {args.max_n_pose}")
     print(f"  -> 计算资源: {args.host} ({args.ncpu} 核心)")
 
-    print("\n=== 2. 生成多阶段 IFD 任务输入文件 (ifd_job.inp) ===")
+    print("\n=== 2. 生成多阶段 IFD 任务输入文件 ===")
     
     in_filename = f"{args.jobname}.inp"
     
-    # 构建完整的多阶段 multisim 输入内容
+    # 严格按照您提供的成功模板格式构建内容，使用 BINDING_SITE ligand Z:999
     ifd_in_content = f"""# Automatically generated Schrödinger Multi-stage IFD input file
 
-INPUT_FILE {args.receptor}
+INPUT_FILE {prepared_receptor_filename}
 
 STAGE GLIDE_DOCKING2
-  BINDING_SITE ligand {args.site}
+  BINDING_SITE ligand Z:999
   INNERBOX 10.0
   OUTERBOX auto
   LIGAND_FILE {args.dbase}
@@ -92,7 +123,7 @@ STAGE SORT_AND_FILTER
   POSE_KEEP 20
 
 STAGE GLIDE_DOCKING2
-  BINDING_SITE ligand {args.site}
+  BINDING_SITE ligand Z:999
   INNERBOX 10.0
   OUTERBOX auto
   LIGAND_FILE {args.dbase}
@@ -120,10 +151,9 @@ STAGE SCORING
         f.write(ifd_in_content.strip() + "\n")
     print(f"  -> 配置文件已生成: {in_filename}")
 
-    print("\n=== 3. 自动生成 Shell 提交脚本 (run_ifd.sh) ===")
+    print("\n=== 3. 自动生成 Shell 提交脚本 ===")
     sh_filename = f"run_{args.jobname}.sh"
     
-    # 按照标准的 Schrödinger Master 格式编写 Shell 脚本
     sh_content = f"""#!/bin/bash
 #SBATCH -J {args.jobname}
 
@@ -133,12 +163,10 @@ STAGE SCORING
     with open(sh_filename, "w") as f:
         f.write(sh_content)
     
-    # 赋予 .sh 文件可执行权限
     os.chmod(sh_filename, os.stat(sh_filename).st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
     
-    print(f"  -> Shell 提交脚本已生成并赋予执行权限: {sh_filename}")
-    print("\n您可以直接通过以下命令运行任务：")
-    print(f"  ./{sh_filename}")
+    print(f"  -> Shell 提交脚本已生成: {sh_filename}")
+    print(f"您可以重新运行: ./{sh_filename}")
 
 if __name__ == "__main__":
     main()
