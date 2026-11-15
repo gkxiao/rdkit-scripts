@@ -238,14 +238,14 @@ done
 
 1. **仅提取配体（类似 Ligand mode）**：
 ```bash
-python rd_mae_split.py 4IVC_W1305.maegz --mode ligand --prefix 4ivc
+python rdkit_mae_split.py 4IVC_W1305.maegz --mode ligand --prefix 4ivc
 ```
 
 * 会在当前目录下生成 `4ivc_ligand.sdf`，里面精准包含了结合口袋中的小分子配体。
 
 2. **仅提取受体（类似 Receptor mode）**：
 ```bash
-python rd_mae_split.py 4IVC_W1305.maegz --mode receptor --prefix 4ivc
+python rdkit_mae_split.py 4IVC_W1305.maegz --mode receptor --prefix 4ivc
 ```
 
 * 会在当前目录下生成 `4ivc_receptor.pdb`，包含了对接或准备好的蛋白骨架结构。
@@ -253,7 +253,7 @@ python rd_mae_split.py 4IVC_W1305.maegz --mode receptor --prefix 4ivc
 
 3. **同时导出**：
 ```bash
-python rd_mae_split.py 4IVC_W1305.maegz --mode all --prefix 4ivc
+python rdkit_mae_split.py 4IVC_W1305.maegz --mode all --prefix 4ivc
 
 ```
 
