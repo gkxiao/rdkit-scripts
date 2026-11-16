@@ -3,6 +3,7 @@
 从SQLite3数据库里将母体化合物的登记号，SMILES与CHEMBL_ID导出为CSV格式，以便后续查询。
 
 ```bash
+# 生成文件:`chembl_37_parent_molecules.csv`
 python export_chembl_smiles.py
 ```
 
@@ -10,9 +11,11 @@ python export_chembl_smiles.py
 
 ```bash
 # 创建指纹相似性搜索数据库
+# 生成文件：chembl37_parent_fps.pkl
 python create_chembl37_fplibrary.py
 
 # 创建子结构数搜索据库
+# 生成文件：chembl37_parent_ssslib.pkl
 python create_chembl37_substructlibrary.py
 ```
 
