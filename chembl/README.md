@@ -1,3 +1,9 @@
+## 导出母体化合物
+
+```bash
+python export_chembl37.py
+```
+
 ## 创建搜索用数据库
 
 ```bash
