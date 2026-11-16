@@ -1,7 +1,9 @@
 ## 导出母体化合物
 
+从SQLite3数据库里将母体化合物的登记号，SMILES与CHEMBL_ID导出为CSV格式，以便后续查询。
+
 ```bash
-python export_chembl37.py
+python export_chembl_smiles.py
 ```
 
 ## 创建搜索用数据库
