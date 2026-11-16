@@ -1,3 +1,29 @@
+## 创建搜索用数据库
+
+```bash
+# 创建指纹相似性搜索数据库
+python create_chembl37_fplibrary.py
+
+# 创建子结构数搜索据库
+python create_chembl37_substructlibrary.py
+```
+
+## 相似性用法示例
+
+```bash
+# 基本用法
+python chembl37_similarity_search.py -query 'Cc1cc(-n2ncc(=O)[nH]c2=O)ccc1C(=O)c1ccccc1Cl' -o hits.csv
+
+# 调整阈值并只输出前 20 条
+python chembl37_similarity_search.py -query 'CCO' -o hits.csv --threshold 0.6 --topn 20
+```
+
+### 几个实现上的注意点
+
+- **SMILES 里的特殊字符要加引号**：`-query` 的值如果包含 `#`、`=` 等字符，在 shell 里必须用单引号包住，否则会被 shell 解释。上面的示例已经加了单引号。
+- **输出顺序**：`hits` 先按阈值过滤再排序，`--topn` 在排序之后截断，所以拿到的是全局最相似的前 N 条，而不是先截断再排序。
+- **指纹参数一致性**：脚本里 `radius=2, fpSize=2048` 必须和生成 `chembl37_parent_fps.pkl` 时完全一致，否则相似度无意义。如果以后改了参数，建议把参数也写进 pickle 文件名，避免混用。
+- **无效查询**：`MolFromSmiles` 返回 `None` 时直接退出并提示，避免后续 `GetFingerprint` 报错。
 
 
 ## 子结构搜索用法示例
