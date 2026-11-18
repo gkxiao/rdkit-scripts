@@ -290,6 +290,39 @@ rdkit_mae_analyze.py 4IVC_W1305.maegz
 
 这有助于你在进行结构拆分前进行决策。
 
+## Schrodinger Fukui function
+
+FUKUI function计算：
+
+```bash
+"${SCHRODINGER}/jaguar" run fukui.py -jobname=jag_batch_fukui_b3lyp-d3_lacvpsp -plus -minus '-k=basis=lacvp*+' -k=dftname=b3lyp-d3 -k=iacc=1 -k=dconv=5e-6 -k=iflinks=1 CONF_17.mae -delta 0.01 -HOST localhost -PARALLEL 8 -TMPLAUNCHDIR
+```
+
+脚本基于 Schrödinger 的 `schrodinger.structure` 读写 mae，把表里的 **HOMO 块 f_NN → f⁻、LUMO 块 f_NN → f⁺、f0=(f⁻+f⁺)/2** 写成带 `r_` 前缀的原子属性（Maestro 里可直接排序/上色）。
+
+FUKUI指数提取：
+
+```bash
+$SCHRODINGER/run sch_fukui_to_mae.py -fukui-out CONF_17_1.out -imae ../CONF_17.mae -omae CONF_16-fukui-out.maegz
+```
+预期看到：
+
+```
+已写入 48 个原子的 f-/f+/f0 -> CONF_16-fukui-out.maegz
+  f- 最大(亲电进攻): C8=0.257, C9=0.173, C12=0.152, Cl10=0.094, C16=0.070
+  f+ 最大(亲核进攻): C29=0.262, C27=0.259, C24=0.180, N26=0.132, S21=0.043
+  f0 最大(自由基)  : C8=0.133, C29=0.131, C27=0.130, C24=0.090, C9=0.087
+完成。
+```
+
+几点说明：
+
+1. **属性名**：`r_fukui_fminus` / `r_fukui_fplus` / `r_fukui_f0`。在 Maestro 打开 `CONF_17-out.mae`，Project Table → Columns → Atom Properties 里勾选，即可按 f⁺ 排序或做 atom color by property。
+2. **对齐检查**：脚本按表里的“元素+编号”对到 mae 的原子 index，并核对元素符号。若打印 `元素符号不一致` 警告，说明 `CONF_17.mae` 与 fukui 输入（`CONF_17_1.mae`）原子顺序不同——直接改用 `-imae CONF_17_1.mae`（看目录里它是 fukui 实际读入的几何）。
+3. **自检**：脚本会用表里的 `f_SS` 反算 `(f⁻+f⁺)/2`，差异 >0.001 会报警，防止列序解读错。
+4. 若还想加双描述符，把循环里补一行 `at.property["r_fukui_dual"] = rec["fplus"] - rec["fminus"]` 即可。
+
+
 ## 混合精度的构象系综分析
 
 混合精度构象系综采样与分析采用多级别能量评估方案：初始阶段依靠低精度力场快速筛除不可行构象；随后通过半经验量子化学（SQM）或其它低计算的方法实施几何弛豫与构象去重；最后执行 DFT 单点能计算，依据高精度能量对构象系综重新排序。
