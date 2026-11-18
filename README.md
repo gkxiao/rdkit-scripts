@@ -303,7 +303,10 @@ FUKUI function计算：
 FUKUI指数提取：
 
 ```bash
-$SCHRODINGER/run sch_fukui_to_mae.py -fukui-out CONF_17_1.out -imae ../CONF_17.mae -omae CONF_16-fukui-out.maegz
+$SCHRODINGER/run sch_fukui_to_mae.py \
+-fukui-out CONF_17_1.out \
+-imae ../CONF_17.mae \
+-omae CONF_16-fukui-out.maegz
 ```
 预期看到：
 
