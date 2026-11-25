@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Standalone xTB + g-xTB(COSMO) + CREST workflow (no Schrödinger).
+Standalone xTB + g-xTB(COSMO) + CREST workflow.
 
 Only obabel, xtb and crest are required. RDKit is optional: when available
 (for example in the psi4 environment) it is used to write final.sdf;
