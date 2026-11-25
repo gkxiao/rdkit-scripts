@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Standalone xTB + g-xTB(COSMO) + CREST workflow.
+Standalone xTB + g-xTB(COSMO) + CREST workflow (no Schrödinger).
 
 Only obabel, xtb and crest are required. RDKit is optional: when available
 (for example in the psi4 environment) it is used to write final.sdf;
@@ -402,9 +402,31 @@ class XtbGxtbClusterWorkflow:
                                    total, idx, stage, rc)
 
     # ------------------------------------------------------------------- xTB
+    def validateUhf(self):
+        """Convert multiplicity 2S+1 to the unpaired-electron count used by
+        xtb (-u) and CREST (-uhf): uhf = mult - 1, and check that the electron
+        count is consistent with it."""
+        uhf = self.mult - 1
+        table = Chem.GetPeriodicTable()
+        zsum = sum(table.GetAtomicNumber(e) for e in self.template.elements)
+        nelec = zsum - self.charge
+        if nelec < 0:
+            raise RuntimeError(
+                'Charge {0} is too large: Z_sum={1}, N_elec={2}.'.format(
+                    self.charge, zsum, nelec))
+        if nelec % 2 != uhf % 2:
+            raise RuntimeError(
+                'Charge/multiplicity mismatch: {0} electrons with '
+                'multiplicity {1} (uhf={2}).'.format(nelec, self.mult, uhf))
+        self.uhf = uhf
+        logger.info('Spin: multiplicity=%d -> uhf=%d '
+                    '(Z_sum=%d, charge=%d, N_elec=%d)',
+                    self.mult, uhf, zsum, self.charge, nelec)
+
     def runXtb(self):
         xtb = self.tools['xtb']
         self.xtb_exe = xtb
+        self.validateUhf()
         logger.info('xTB executable: %s', xtb)
 
         workers, threads = self.jobLayout(len(self.records))
@@ -416,7 +438,7 @@ class XtbGxtbClusterWorkflow:
             namespace = 'CONF_{0:05d}'.format(rec['index'])
             cmd = [xtb, os.path.basename(rec['xyz']), '--opt',
                    self.xtb_opt_level, '-c', str(self.charge), '-u',
-                   str(self.mult - 1), '--namespace', namespace]
+                   str(self.uhf), '--namespace', namespace]
             cmd += XTB_METHODS[self.xtb_method]
             if self.xtb_solvent.lower() not in NO_SOLVENT:
                 cmd += ['--alpb', self.xtb_solvent]
@@ -489,7 +511,7 @@ class XtbGxtbClusterWorkflow:
                                          rec['index'])),
                         os.path.join(work, 'CONF.xyz'))
             cmd = [self.xtb_exe, 'CONF.xyz', '-c', str(self.charge), '-u',
-                   str(self.mult - 1), '--sp', '--gxtb']
+                   str(self.uhf), '--sp', '--gxtb']
             if self.gxtb_solvent.lower() not in NO_SOLVENT:
                 cmd += ['--cosmo', self.gxtb_solvent]
             tasks.append({'record': rec, 'cmd': cmd, 'cwd': work,
@@ -563,7 +585,7 @@ class XtbGxtbClusterWorkflow:
 
         cmd = [crest, 'reference.xyz', '--cregen',
                os.path.join('..', '2_gxtb', 'ensemble_gxtb.xyz'),
-               '-chrg', str(self.charge), '-uhf', str(self.mult - 1),
+               '-chrg', str(self.charge), '-uhf', str(self.uhf),
                '-rthr', str(self.rthr), '-ewin', str(self.ewin)]
         logger.info('CREST: %s', ' '.join(cmd))
         with open(os.path.join(cluster_dir, 'crest.log'), 'w') as fh:
@@ -726,7 +748,8 @@ def getParser():
     parser.add_argument('-charge', type=int, required=True,
                         help='Total formal charge.')
     parser.add_argument('-mult', type=int, default=1,
-                        help='Spin multiplicity 2S+1 (default 1).')
+                        help='Spin multiplicity 2S+1 (default 1). '
+                        'xtb/CREST receive uhf = mult - 1.')
     parser.add_argument('-xtb_method', default='gfn2',
                         choices=sorted(XTB_METHODS),
                         help='xTB Hamiltonian for optimization.')
